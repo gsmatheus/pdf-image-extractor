@@ -4,16 +4,15 @@ import os
 import io
 from PIL import Image
 
-
 # Define the PDF file path
-PDF_PATH = "./Ly Q Dan - Catalogo Virtual - Verão 2024 - Jeans.pdf"
+PDF_PATH = "./"
 OUTPUT_IMAGES_DIR = "images"
-
+IMAGE_FORMAT = "png"
+IMAGE_QUALITY = 100
 
 # Removes all letters from a string
 def remove_letters(text):
     return ''.join([c for c in text if not c.isalpha()])
-
 
 # Resizes an image so that its width or height does not exceed the specified maximum size.
 def resize_image(image):
@@ -43,7 +42,6 @@ def resize_image(image):
 
         image = image.resize((new_width, new_height), Image.BICUBIC)
     return image
-
 
 # Extracts and saves all images from the specified page of the document.
 def save_images_from_page(document, page_number, product_reference):
@@ -78,13 +76,12 @@ def save_images_from_page(document, page_number, product_reference):
 
         # Set the filename of the image and save
         image_filename = os.path.join(
-            OUTPUT_IMAGES_DIR, f"{product_reference}_{page_number + 1}.webp")
-        image.save(image_filename, "WEBP", quality=85)
+            OUTPUT_IMAGES_DIR, f"{product_reference}_{page_number + 1}.{IMAGE_FORMAT}")
+        image.save(image_filename, f"{IMAGE_FORMAT}", quality=f"{IMAGE_QUALITY}")
 
         saved_images.append(image_filename)
 
     return saved_images
-
 
 # Opens the document with fitz for image extraction.
 document = fitz.open(PDF_PATH)
