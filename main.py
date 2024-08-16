@@ -2,13 +2,22 @@ import pdfplumber
 import fitz
 import os
 import io
+import argparse
 from PIL import Image
 
+# Parse arguments from terminal
+parser=argparse.ArgumentParser(description="The PDF Image Extractor is a Python script designed to process PDF files, specifically extracting and saving images embedded within the pages of the document. Besides the image extraction, it also prints out the textual content of the pages.")
+parser.add_argument("input_file")
+parser.add_argument("output_dir")
+parser.add_argument("img_format")
+parser.add_argument("img_quality")
+args=parser.parse_args()
+
 # Define the PDF file path
-PDF_PATH = "./"
-OUTPUT_IMAGES_DIR = "images"
-IMAGE_FORMAT = "png"
-IMAGE_QUALITY = 100
+PDF_PATH = args.input_file
+OUTPUT_IMAGES_DIR = args.output_dir
+IMAGE_FORMAT = args.img_format
+IMAGE_QUALITY = int(args.img_quality)
 
 # Removes all letters from a string
 def remove_letters(text):
