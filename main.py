@@ -2,18 +2,26 @@ import pdfplumber
 import fitz
 import os
 import io
+import argparse
 from PIL import Image
 
+# Parse arguments from terminal
+parser=argparse.ArgumentParser(description="The PDF Image Extractor is a Python script designed to process PDF files, specifically extracting and saving images embedded within the pages of the document. Besides the image extraction, it also prints out the textual content of the pages.")
+parser.add_argument("input_file")
+parser.add_argument("output_dir")
+parser.add_argument("img_format")
+parser.add_argument("img_quality")
+args=parser.parse_args()
 
 # Define the PDF file path
-PDF_PATH = "./Ly Q Dan - Catalogo Virtual - Verão 2024 - Jeans.pdf"
-OUTPUT_IMAGES_DIR = "images"
-
+PDF_PATH = args.input_file
+OUTPUT_IMAGES_DIR = args.output_dir
+IMAGE_FORMAT = args.img_format
+IMAGE_QUALITY = int(args.img_quality)
 
 # Removes all letters from a string
 def remove_letters(text):
     return ''.join([c for c in text if not c.isalpha()])
-
 
 # Resizes an image so that its width or height does not exceed the specified maximum size.
 def resize_image(image):
@@ -43,7 +51,6 @@ def resize_image(image):
 
         image = image.resize((new_width, new_height), Image.BICUBIC)
     return image
-
 
 # Extracts and saves all images from the specified page of the document.
 def save_images_from_page(document, page_number, product_reference):
@@ -78,13 +85,12 @@ def save_images_from_page(document, page_number, product_reference):
 
         # Set the filename of the image and save
         image_filename = os.path.join(
-            OUTPUT_IMAGES_DIR, f"{product_reference}_{page_number + 1}.webp")
-        image.save(image_filename, "WEBP", quality=85)
+            OUTPUT_IMAGES_DIR, f"{product_reference}_{page_number + 1}.{IMAGE_FORMAT}")
+        image.save(image_filename, f"{IMAGE_FORMAT}", quality=f"{IMAGE_QUALITY}")
 
         saved_images.append(image_filename)
 
     return saved_images
-
 
 # Opens the document with fitz for image extraction.
 document = fitz.open(PDF_PATH)
