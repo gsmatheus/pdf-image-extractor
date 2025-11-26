@@ -36,21 +36,22 @@ uv run main.py
 ## Usage
 
 1. Clone the repository or download the script.
-2. Ensure you have a folder named `images` (or another name of your choice, but remember to update the `OUTPUT_DIR` constant in the script accordingly) in the same directory as the script. This is where the extracted images will be saved.
-3. Update the `PDF_PATH` constant in the script to point to your target PDF file.
-4. Run the script:
-```
-python main.py input_file output_dir img_format img_quality
-```
+2. Run the script:
 
-After execution, check the `images` folder for the extracted images.
+  ```bash
+  python main.py input_file output_dir img_format img_quality [--min_size MIN] [--pages PAGES]
+  ```
 
-For example, you can extract to png in the current folder via:
+  - `--min_size`: (Optional) Minimum width/height for images to extract (default: 500).
+  - `--pages`: (Optional) Comma-separated list or range of page numbers to process (e.g., `1,3,5` or `2-4`).
 
-```
-python main.py ./file.pdf ./ png 100
-```
+  If the output directory does not exist, it will be created automatically.
 
+  **Example:**
+  
+  ```bash
+  python main.py ./file.pdf ./ png 100 --min_size 600 --pages 1,3,5
+  ```
 
 ## Customization
 
