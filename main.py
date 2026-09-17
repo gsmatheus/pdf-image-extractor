@@ -82,6 +82,7 @@ def save_images_from_page(document, page_number, product_reference):
     pagina = document.load_page(page_number)
     imagens = pagina.get_images(full=True)
 
+    saved_count = 0
     for img_index, img in enumerate(imagens):
         xref = img[0]
         base_image = document.extract_image(xref)
@@ -97,8 +98,9 @@ def save_images_from_page(document, page_number, product_reference):
 
         # Set the filename of the image and save with sanitized product reference
         safe_reference = sanitize_filename(product_reference)
+        saved_count += 1
         image_filename = os.path.join(
-            OUTPUT_IMAGES_DIR, f"{safe_reference}_{page_number + 1}.{IMAGE_FORMAT}")
+            OUTPUT_IMAGES_DIR, f"{safe_reference}_{page_number + 1}_{saved_count}.{IMAGE_FORMAT}")
         image.save(image_filename, IMAGE_FORMAT, quality=IMAGE_QUALITY)
 
         saved_images.append(image_filename)
