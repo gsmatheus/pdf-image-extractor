@@ -98,7 +98,7 @@ def save_images_from_page(document, page_number, product_reference):
         # Set the filename of the image and save with sanitized product reference
         safe_reference = sanitize_filename(product_reference)
         image_filename = os.path.join(
-            OUTPUT_IMAGES_DIR, f"{safe_reference}_{page_number + 1}.{IMAGE_FORMAT}")
+            OUTPUT_IMAGES_DIR, f"{safe_reference}_{page_number + 1}_{img_index + 1}.{IMAGE_FORMAT}")
         image.save(image_filename, IMAGE_FORMAT, quality=IMAGE_QUALITY)
 
         saved_images.append(image_filename)
