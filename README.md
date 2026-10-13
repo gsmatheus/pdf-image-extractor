@@ -56,3 +56,20 @@ python main.py ./file.pdf ./ png 100
 
 - **Changing Output Image Format**: By default, images are saved in the `.webp` format due to its efficiency. However, you can modify the `save_page_images` function to save in a different format, such as PNG or JPEG.
 - **Adjusting Resizing Ratio**: The `resize_image` function currently reduces the image size to 60% of the original. Adjust the resizing ratio as per your requirements by modifying the multiplier value.
+
+## Tests
+
+The test PDFs are generated on the fly by `tests/pdf_factory.py` (text-only, scans, several images per page, JPEG/CMYK/alpha/1-bit images, rotated pages, odd filenames, encrypted and corrupted files, ...), so no binaries are committed.
+
+```
+uv sync
+uv run pytest
+```
+
+To write all the sample PDFs to disk and try the CLI by hand:
+
+```
+uv run python tests/pdf_factory.py tests/fixtures
+```
+
+Tests marked `xfail` document known bugs; fixing one makes it fail until the marker is removed.
