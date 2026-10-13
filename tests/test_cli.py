@@ -26,14 +26,12 @@ def test_broken_pdf_fails_without_traceback(name, make_pdf, run_cli):
     assert not list(out.iterdir())
 
 
-@bug("missing input is not validated (fixed by PR #6)")
 def test_missing_input_file(run_cli, tmp_path):
     proc, _ = run_cli(tmp_path / "nope.pdf")
     assert proc.returncode != 0
     assert "Traceback" not in proc.stderr
 
 
-@bug("output dir is not created when missing (fixed by PR #6)")
 def test_output_dir_is_created_when_missing(make_pdf, tmp_path):
     pdf, _ = make_pdf("single_large_image")
     target = tmp_path / "a" / "b" / "c"
