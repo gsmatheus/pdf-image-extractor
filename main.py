@@ -3,7 +3,16 @@ import fitz
 import os
 import io
 import argparse
+import re
+import sys
 from PIL import Image
+
+# Validates the --pages value so that bad input is a usage error, not a traceback.
+def page_spec(value):
+    if not re.fullmatch(r"\d+(-\d+)?(,\d+(-\d+)?)*", value):
+        raise argparse.ArgumentTypeError(
+            f"invalid page selection '{value}' (expected e.g. 1,3,5 or 2-4)")
+    return value
 
 # Parse arguments from terminal
 parser=argparse.ArgumentParser(description="The PDF Image Extractor is a Python script designed to process PDF files, specifically extracting and saving images embedded within the pages of the document. Besides the image extraction, it also prints out the textual content of the pages.")
@@ -12,7 +21,7 @@ parser.add_argument("output_dir")
 parser.add_argument("img_format")
 parser.add_argument("img_quality")
 parser.add_argument("--min_size", type=int, default=500, help="Minimum width/height for images to extract (default: 500)")
-parser.add_argument("--pages", type=str, default=None, help="Comma-separated list or range of page numbers to process, e.g. 1,3,5 or 2-4 (default: all)")
+parser.add_argument("--pages", type=page_spec, default=None, help="Comma-separated list or range of page numbers to process, e.g. 1,3,5 or 2-4 (default: all)")
 args=parser.parse_args()
 
 # Define the PDF file path
@@ -24,7 +33,7 @@ MIN_SIZE = args.min_size
 
 # Check if input PDF exists
 if not os.path.isfile(PDF_PATH):
-    print(f"Error: Input PDF file '{PDF_PATH}' does not exist.")
+    print(f"Error: Input PDF file '{PDF_PATH}' does not exist.", file=sys.stderr)
     exit(1)
 
 # Ensure output directory exists
@@ -33,7 +42,7 @@ if not os.path.exists(OUTPUT_IMAGES_DIR):
         os.makedirs(OUTPUT_IMAGES_DIR)
         print(f"Created output directory: {OUTPUT_IMAGES_DIR}")
     except Exception as e:
-        print(f"Failed to create output directory '{OUTPUT_IMAGES_DIR}': {e}")
+        print(f"Failed to create output directory '{OUTPUT_IMAGES_DIR}': {e}", file=sys.stderr)
         exit(1)
 
 # Parse pages argument
