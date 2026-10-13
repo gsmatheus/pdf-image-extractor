@@ -6,17 +6,12 @@ from conftest import saved_lines
 
 OK_CASES = [n for n, (_, kind) in pdf_factory.CASES.items() if kind == "ok"]
 
-ISSUE_3 = "issue #3: images on the same page overwrite each other (filename has no image index)"
 LONG_NAME = "filename built from the page text exceeds the OS limit -> OSError"
 
 # test name -> {case: reason}. xfail(strict): fixing a bug turns the test red until
 # its entry is removed, which keeps this list honest.
 KNOWN_BUGS = {
     "test_every_image_ends_up_as_its_own_file": {
-        "two_images_one_page": ISSUE_3,
-        "five_images_one_page": ISSUE_3,
-        "multi_page_mixed": ISSUE_3,
-        "tall_and_wide": ISSUE_3,
         "long_text_page": LONG_NAME,
     },
     "test_exits_cleanly": {"long_text_page": LONG_NAME},
