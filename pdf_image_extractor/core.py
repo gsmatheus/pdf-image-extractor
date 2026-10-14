@@ -23,6 +23,8 @@ class PageResult:
     number: int  # 1-based
     text: str
     images: list[str] = field(default_factory=list)
+    # Images of this page that could not be processed (corrupt data, unsupported encoding...).
+    warnings: list[str] = field(default_factory=list)
 
 
 def remove_letters(text: str) -> str:
@@ -91,10 +93,13 @@ def resize_image(image: Image.Image) -> Image.Image:
 
 def save_images_from_page(document: fitz.Document, page_number: int, reference: str,
                           output_dir: str, image_format: str, quality: int,
-                          min_size: int = DEFAULT_MIN_SIZE) -> list[str]:
+                          min_size: int = DEFAULT_MIN_SIZE,
+                          warnings: Optional[list[str]] = None) -> list[str]:
     """Saves every image of a page that is at least ``min_size`` on both sides.
 
     Files are named ``<reference>_<page>_<image>.<image_format>`` (1-based numbers).
+    An image that cannot be decoded or written is skipped and described in
+    ``warnings`` (when given) so that one bad image does not abort the whole run.
     Returns the list of saved filenames.
     """
     saved_images = []
@@ -103,28 +108,37 @@ def save_images_from_page(document: fitz.Document, page_number: int, reference: 
     save_as = pillow_format(image_format)
 
     for img_index, img in enumerate(page.get_images(full=True)):
-        xref = img[0]
-        image_bytes = document.extract_image(xref)["image"]
-
-        image = Image.open(io.BytesIO(image_bytes))
-        if image.width < min_size or image.height < min_size:
-            continue
-
-        image = resize_image(image)
-
         filename = os.path.join(
             output_dir, f"{safe_reference}_{page_number + 1}_{img_index + 1}.{image_format}")
-        image.save(filename, save_as, quality=quality)
+        try:
+            image_bytes = document.extract_image(img[0])["image"]
+            image = Image.open(io.BytesIO(image_bytes))
+            if image.width < min_size or image.height < min_size:
+                continue
+            image = resize_image(image)  # decodes the pixels, so corrupt data fails here
+            try:
+                image.save(filename, save_as, quality=quality)
+            except Exception:
+                if os.path.exists(filename):
+                    os.remove(filename)  # drop the half-written file
+                raise
+        except Exception as e:
+            if warnings is not None:
+                warnings.append(f"page {page_number + 1}, image {img_index + 1}: "
+                                f"skipped ({type(e).__name__}: {e})")
+            continue
         saved_images.append(filename)
 
     return saved_images
 
 
 def extract(pdf_path: str, output_dir: str, image_format: str, quality: int,
-            min_size: int = DEFAULT_MIN_SIZE, pages: Optional[str] = None) -> Iterator[PageResult]:
+            min_size: int = DEFAULT_MIN_SIZE, pages: Optional[str] = None,
+            password: Optional[str] = None) -> Iterator[PageResult]:
     """Yields the text and saved images of each selected page, in order.
 
-    Raises ExtractorError if the PDF cannot be opened or is password protected.
+    Raises ExtractorError if the PDF cannot be opened, or is password protected and
+    ``password`` is missing or wrong.
     """
     try:
         document = fitz.open(pdf_path)
@@ -132,17 +146,22 @@ def extract(pdf_path: str, output_dir: str, image_format: str, quality: int,
         raise ExtractorError(f"could not open '{pdf_path}' as a PDF: {e}") from e
     try:
         if document.needs_pass:
-            raise ExtractorError(f"'{pdf_path}' is password protected")
+            if password is None:
+                raise ExtractorError(
+                    f"'{pdf_path}' is password protected (use --password)")
+            if not document.authenticate(password):
+                raise ExtractorError(f"wrong password for '{pdf_path}'")
         try:
-            pdf = pdfplumber.open(pdf_path)
+            pdf = pdfplumber.open(pdf_path, password=password)
         except Exception as e:
             raise ExtractorError(f"could not read '{pdf_path}': {e}") from e
         with pdf:
             for index in parse_pages(pages, len(pdf.pages)):
                 text = (pdf.pages[index].extract_text() or "").strip()
+                warnings: list[str] = []
                 images = save_images_from_page(
                     document, index, remove_letters(text), output_dir,
-                    image_format, quality, min_size)
-                yield PageResult(index + 1, text, images)
+                    image_format, quality, min_size, warnings)
+                yield PageResult(index + 1, text, images, warnings)
     finally:
         document.close()

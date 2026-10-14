@@ -450,6 +450,21 @@ def _(path):
 
 # --------------------------------------------------------------------------- broken input
 
+@case("corrupt_image_among_good")
+def _(path):
+    """The middle image claims to be JPEG 2000 but holds no valid data, so MuPDF refuses
+    to extract it; its two neighbours are fine."""
+    doc = new_doc()
+    p = add_page(doc, "Mixed 60001")
+    rects = stack_rects(3)
+    place(p, 700, 700, seed=1, rect=rects[0])
+    bad_xref = place(p, 700, 700, seed=2, rect=rects[1])
+    place(p, 700, 700, seed=3, rect=rects[2])
+    doc.xref_set_key(bad_xref, "Filter", "/JPXDecode")
+    save(doc, path)
+    return Case("one undecodable image between two good pictures", 1, [2], ["60001"])
+
+
 @case("encrypted", kind="encrypted")
 def _(path):
     doc = new_doc()

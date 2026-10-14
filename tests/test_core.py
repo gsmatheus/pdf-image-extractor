@@ -2,6 +2,8 @@
 import pytest
 from PIL import Image
 
+import pdf_factory
+
 from pdf_image_extractor import (
     ExtractorError,
     extract,
@@ -158,3 +160,57 @@ def test_main_usage_error_exits_2(tmp_path):
     with pytest.raises(SystemExit) as exc:
         main(["only-one-argument"])
     assert exc.value.code == 2
+
+
+# --------------------------------------------------------------------------- bad images / passwords
+
+def test_one_undecodable_image_does_not_abort_the_run(make_pdf, tmp_path):
+    pdf, case = make_pdf("corrupt_image_among_good")
+    [page] = extract(str(pdf), str(tmp_path), "png", 90)
+    assert len(page.images) == sum(case.large_images_per_page) == 2
+    assert [p.rsplit("/", 1)[-1] for p in page.images] == ["60001_1_1.png", "60001_1_3.png"]
+    [warning] = page.warnings
+    assert "page 1, image 2" in warning
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["60001_1_1.png", "60001_1_3.png"]
+
+
+def test_failed_image_never_removes_a_file_from_a_previous_run(make_pdf, tmp_path):
+    pdf, _ = make_pdf("corrupt_image_among_good")
+    keep = tmp_path / "60001_1_2.png"
+    keep.write_bytes(b"from an earlier run")
+    list(extract(str(pdf), str(tmp_path), "png", 90))
+    assert keep.read_bytes() == b"from an earlier run"
+
+
+def test_cli_warns_on_stderr_and_still_succeeds(make_pdf, tmp_path, capsys):
+    pdf, _ = make_pdf("corrupt_image_among_good")
+    assert main([str(pdf), str(tmp_path), "png", "90"]) == 0
+    captured = capsys.readouterr()
+    assert captured.out.count("Image Saved:") == 2
+    assert "Warning: page 1, image 2" in captured.err
+
+
+def test_password_opens_an_encrypted_pdf(make_pdf, tmp_path):
+    pdf, case = make_pdf("encrypted")
+    [page] = extract(str(pdf), str(tmp_path), "png", 90, password=pdf_factory.PASSWORD)
+    assert "40001" in page.text
+    assert len(page.images) == 1
+
+
+def test_wrong_password_is_an_error(make_pdf, tmp_path):
+    pdf, _ = make_pdf("encrypted")
+    with pytest.raises(ExtractorError, match="wrong password"):
+        list(extract(str(pdf), str(tmp_path), "png", 90, password="nope"))
+
+
+def test_missing_password_hints_at_the_option(make_pdf, tmp_path):
+    pdf, _ = make_pdf("encrypted")
+    with pytest.raises(ExtractorError, match="--password"):
+        list(extract(str(pdf), str(tmp_path), "png", 90))
+
+
+def test_cli_password_option(make_pdf, tmp_path, capsys):
+    pdf, _ = make_pdf("encrypted")
+    assert main([str(pdf), str(tmp_path), "png", "90", "--password", pdf_factory.PASSWORD]) == 0
+    assert "Image Saved:" in capsys.readouterr().out
+    assert main([str(pdf), str(tmp_path), "png", "90", "--password", "wrong"]) == 1
