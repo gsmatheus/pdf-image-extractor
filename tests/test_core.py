@@ -13,7 +13,7 @@ from pdf_image_extractor import (
     resize_image,
     sanitize_filename,
 )
-from pdf_image_extractor.cli import main
+from pdf_image_extractor.cli import format_summary, main
 
 
 # --------------------------------------------------------------------------- pure helpers
@@ -248,3 +248,38 @@ def test_cli_password_option(make_pdf, tmp_path, capsys):
     assert main([str(pdf), str(tmp_path), "png", "90", "--password", pdf_factory.PASSWORD]) == 0
     assert "Image Saved:" in capsys.readouterr().out
     assert main([str(pdf), str(tmp_path), "png", "90", "--password", "wrong"]) == 1
+
+
+# --------------------------------------------------------------------------- run summary
+
+@pytest.mark.parametrize("args, expected", [
+    ((4, 3, [2, 4], 0), "Done: 3 images from 4 pages. No images on pages 2, 4."),
+    ((1, 1, [], 0), "Done: 1 image from 1 page."),
+    ((1, 0, [1], 0), "Done: 0 images from 1 page. No images on page 1."),
+    ((0, 0, [], 0), "Done: 0 images from 0 pages."),
+    ((3, 2, [], 1), "Done: 2 images from 3 pages. 1 image skipped (see warnings)."),
+    ((40, 0, list(range(1, 41)), 0),
+     "Done: 0 images from 40 pages. No images on pages 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ... (40 in total)."),
+])
+def test_format_summary(args, expected):
+    assert format_summary(*args) == expected
+
+
+def test_cli_prints_the_summary_on_stderr_not_stdout(make_pdf, tmp_path, capsys):
+    pdf, _ = make_pdf("multi_page_mixed")  # images on pages 1 and 3 only
+    assert main([str(pdf), str(tmp_path), "png", "90"]) == 0
+    captured = capsys.readouterr()
+    assert "Done: 3 images from 4 pages. No images on pages 2, 4." in captured.err
+    assert "Done:" not in captured.out  # stdout format is unchanged for anything parsing it
+
+
+def test_cli_summary_counts_skipped_images(make_pdf, tmp_path, capsys):
+    pdf, _ = make_pdf("corrupt_image_among_good")
+    main([str(pdf), str(tmp_path), "png", "90"])
+    assert "Done: 2 images from 1 page. 1 image skipped (see warnings)." in capsys.readouterr().err
+
+
+def test_cli_prints_no_summary_on_error(make_pdf, tmp_path, capsys):
+    pdf, _ = make_pdf("encrypted")
+    assert main([str(pdf), str(tmp_path), "png", "90"]) == 1
+    assert "Done:" not in capsys.readouterr().err

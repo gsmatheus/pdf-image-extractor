@@ -51,6 +51,27 @@ def error(message: str) -> int:
     return 1
 
 
+MAX_LISTED_PAGES = 10
+
+
+def plural(n: int, word: str) -> str:
+    return f"{n} {word}" + ("" if n == 1 else "s")
+
+
+def format_summary(pages: int, images: int, pages_without_images: list[int], skipped: int) -> str:
+    """One-line recap of a run, e.g. 'Done: 3 images from 4 pages. No images on page 2.'"""
+    text = f"Done: {plural(images, 'image')} from {plural(pages, 'page')}."
+    if pages_without_images:
+        listed = ", ".join(map(str, pages_without_images[:MAX_LISTED_PAGES]))
+        if len(pages_without_images) > MAX_LISTED_PAGES:
+            listed += f", ... ({len(pages_without_images)} in total)"
+        label = "page" if len(pages_without_images) == 1 else "pages"
+        text += f" No images on {label} {listed}."
+    if skipped:
+        text += f" {plural(skipped, 'image')} skipped (see warnings)."
+    return text
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
 
@@ -64,6 +85,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         except OSError as e:
             return error(f"Failed to create output directory '{args.output_dir}': {e}")
 
+    pages = images = skipped = 0
+    pages_without_images: list[int] = []
     try:
         for page in extract(args.input_file, args.output_dir, args.img_format,
                             args.img_quality, args.min_size, args.pages, args.password):
@@ -75,8 +98,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             for warning in page.warnings:
                 print(f"Warning: {warning}", file=sys.stderr)
             print("=" * 50)
+            pages += 1
+            images += len(page.images)
+            skipped += len(page.warnings)
+            if not page.images:
+                pages_without_images.append(page.number)
     except ExtractorError as e:
         return error(str(e))
+    print(format_summary(pages, images, pages_without_images, skipped), file=sys.stderr)
     return 0
 
 
