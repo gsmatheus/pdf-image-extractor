@@ -8,15 +8,7 @@ from conftest import run_main, saved_lines
 BROKEN = [n for n, (_, kind) in pdf_factory.CASES.items() if kind != "ok"]
 
 
-def bug(reason):
-    """Known bug: strict xfail, so fixing it forces removing the marker."""
-    return pytest.mark.xfail(strict=True, reason=reason)
-
-
-NO_ERROR_HANDLING = bug("no error handling: fitz/pdfplumber exceptions escape as a traceback")
-
-
-@pytest.mark.parametrize("name", [pytest.param(n, marks=NO_ERROR_HANDLING) for n in BROKEN])
+@pytest.mark.parametrize("name", BROKEN)
 def test_broken_pdf_fails_without_traceback(name, make_pdf, run_cli):
     """Encrypted / truncated / non-PDF input must give a clean non-zero exit."""
     pdf, _ = make_pdf(name)
@@ -46,7 +38,6 @@ def test_missing_arguments_shows_usage():
     assert "usage" in proc.stderr.lower()
 
 
-@bug("int(args.img_quality) raises ValueError; argparse type=int would give a usage error")
 @pytest.mark.parametrize("quality", ["abc", "", "1.5"])
 def test_non_numeric_quality_is_rejected_cleanly(quality, make_pdf, run_cli):
     pdf, _ = make_pdf("single_large_image")
@@ -58,7 +49,7 @@ def test_non_numeric_quality_is_rejected_cleanly(quality, make_pdf, run_cli):
 @pytest.mark.parametrize("fmt, expected", [
     ("png", "PNG"), ("jpeg", "JPEG"), ("webp", "WEBP"),
     ("PNG", "PNG"),   # upper-case should work too
-    pytest.param("jpg", "JPEG", marks=bug("Pillow has no 'JPG' writer; needs mapping to JPEG")),
+    ("jpg", "JPEG"),  # the extension people actually type
 ])
 def test_output_formats(fmt, expected, make_pdf, run_cli):
     pdf, _ = make_pdf("single_large_image")
@@ -69,7 +60,6 @@ def test_output_formats(fmt, expected, make_pdf, run_cli):
         assert img.format == expected
 
 
-@bug("unknown format escapes as KeyError traceback")
 def test_unknown_format_fails_cleanly(make_pdf, run_cli):
     pdf, _ = make_pdf("single_large_image")
     proc, _ = run_cli(pdf, "notaformat", 80)

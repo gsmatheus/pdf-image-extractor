@@ -6,18 +6,9 @@ from conftest import saved_lines
 
 OK_CASES = [n for n, (_, kind) in pdf_factory.CASES.items() if kind == "ok"]
 
-LONG_NAME = "filename built from the page text exceeds the OS limit -> OSError"
-
 # test name -> {case: reason}. xfail(strict): fixing a bug turns the test red until
 # its entry is removed, which keeps this list honest.
-KNOWN_BUGS = {
-    "test_every_image_ends_up_as_its_own_file": {
-        "long_text_page": LONG_NAME,
-    },
-    "test_exits_cleanly": {"long_text_page": LONG_NAME},
-    "test_prints_text_of_every_page": {"long_text_page": LONG_NAME},
-    "test_reports_one_saved_image_per_large_embedded_image": {"long_text_page": LONG_NAME},
-}
+KNOWN_BUGS: dict[str, dict[str, str]] = {}
 
 
 def cases_for(test_name):

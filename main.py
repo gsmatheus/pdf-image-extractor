@@ -14,12 +14,26 @@ def page_spec(value):
             f"invalid page selection '{value}' (expected e.g. 1,3,5 or 2-4)")
     return value
 
+# Longest filename prefix (in bytes) built from the page text; filesystems cap names at 255 bytes.
+MAX_REFERENCE_BYTES = 100
+
+# Normalizes the requested image format, turning the common 'jpg' spelling into Pillow's 'JPEG'.
+def image_format(value):
+    Image.init()
+    name = value.strip().upper()
+    if name == "JPG":
+        name = "JPEG"
+    if name not in Image.SAVE:
+        raise argparse.ArgumentTypeError(
+            f"unsupported image format '{value}' (try png, jpeg, webp)")
+    return value
+
 # Parse arguments from terminal
 parser=argparse.ArgumentParser(description="The PDF Image Extractor is a Python script designed to process PDF files, specifically extracting and saving images embedded within the pages of the document. Besides the image extraction, it also prints out the textual content of the pages.")
 parser.add_argument("input_file")
 parser.add_argument("output_dir")
-parser.add_argument("img_format")
-parser.add_argument("img_quality")
+parser.add_argument("img_format", type=image_format)
+parser.add_argument("img_quality", type=int)
 parser.add_argument("--min_size", type=int, default=500, help="Minimum width/height for images to extract (default: 500)")
 parser.add_argument("--pages", type=page_spec, default=None, help="Comma-separated list or range of page numbers to process, e.g. 1,3,5 or 2-4 (default: all)")
 args=parser.parse_args()
@@ -28,7 +42,8 @@ args=parser.parse_args()
 PDF_PATH = args.input_file
 OUTPUT_IMAGES_DIR = args.output_dir
 IMAGE_FORMAT = args.img_format
-IMAGE_QUALITY = int(args.img_quality)
+PILLOW_FORMAT = "JPEG" if IMAGE_FORMAT.strip().upper() == "JPG" else IMAGE_FORMAT.strip().upper()
+IMAGE_QUALITY = args.img_quality
 MIN_SIZE = args.min_size
 
 # Check if input PDF exists
@@ -72,7 +87,9 @@ def sanitize_filename(text):
         text = text.replace(char, '')
     # Remove multiple spaces and dots
     text = ' '.join(text.split())
-    return text
+    # Keep the result well below the filesystem's filename length limit
+    text = text.encode('utf-8')[:MAX_REFERENCE_BYTES].decode('utf-8', errors='ignore')
+    return text.strip()
 
 # Resizes an image so that its width or height does not exceed the specified maximum size.
 def resize_image(image):
@@ -141,23 +158,37 @@ def save_images_from_page(document, page_number, product_reference):
         safe_reference = sanitize_filename(product_reference)
         image_filename = os.path.join(
             OUTPUT_IMAGES_DIR, f"{safe_reference}_{page_number + 1}_{img_index + 1}.{IMAGE_FORMAT}")
-        image.save(image_filename, IMAGE_FORMAT, quality=IMAGE_QUALITY)
+        image.save(image_filename, PILLOW_FORMAT, quality=IMAGE_QUALITY)
 
         saved_images.append(image_filename)
 
     return saved_images
 
+def fail(message):
+    print(f"Error: {message}", file=sys.stderr)
+    sys.exit(1)
+
 # Opens the document with fitz for image extraction.
-document = fitz.open(PDF_PATH)
+try:
+    document = fitz.open(PDF_PATH)
+except Exception as e:
+    fail(f"could not open '{PDF_PATH}' as a PDF: {e}")
+if document.needs_pass:
+    fail(f"'{PDF_PATH}' is password protected")
 
 # Uses pdfplumber to extract text and fitz for images.
-with pdfplumber.open(PDF_PATH) as pdf:
+try:
+    pdf = pdfplumber.open(PDF_PATH)
+except Exception as e:
+    fail(f"could not read '{PDF_PATH}': {e}")
+
+with pdf:
     pages = pdf.pages
     page_indices = parse_pages(args.pages, len(pages))
     for index in page_indices:
         pagina = pages[index]
         # Extracts and prints text.
-        texto = pagina.extract_text()
+        texto = pagina.extract_text() or ""
         print(f"Text on Page {index + 1}:")
         print(texto.strip())
         print("-" * 50)

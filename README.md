@@ -7,7 +7,7 @@ The PDF Image Extractor is a Python script designed to process PDF files, specif
 ## Features
 
 - **Image Extraction**: Efficiently extracts images from any page within a provided PDF.
-- **Image Resizing**: Automatically resizes the extracted images to 60% of their original size, ensuring consistent output and potentially reducing file size.
+- **Image Resizing**: Automatically resizes the extracted images to 70% of their original size, ensuring consistent output and potentially reducing file size.
 - **Text Extraction**: For each processed page, the script also extracts and prints the textual content.
 - **Flexibility**: Designed with modularity in mind, making it easy to integrate, expand, or modify for various use cases.
 
@@ -29,8 +29,8 @@ pip install pdfplumber pymupdf pillow
 or if using [uv](https://docs.astral.sh/uv/)
 
 ```
-uv synv
-uv run main.py
+uv sync
+uv run main.py input_file output_dir img_format img_quality
 ```
 
 ## Usage
@@ -55,8 +55,8 @@ uv run main.py
 
 ## Customization
 
-- **Changing Output Image Format**: By default, images are saved in the `.webp` format due to its efficiency. However, you can modify the `save_page_images` function to save in a different format, such as PNG or JPEG.
-- **Adjusting Resizing Ratio**: The `resize_image` function currently reduces the image size to 60% of the original. Adjust the resizing ratio as per your requirements by modifying the multiplier value.
+- **Output Image Format**: Chosen on the command line (`png`, `jpeg`/`jpg`, `webp`, ...). Unsupported formats are rejected with a usage error.
+- **Adjusting Resizing Ratio**: The `resize_image` function currently reduces the image size to 70% of the original. Adjust the resizing ratio as per your requirements by modifying the multiplier value.
 
 ## Tests
 
