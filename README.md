@@ -44,6 +44,8 @@ uv run pdf-image-extractor ./file.pdf ./images png 100 --min_size 600 --pages 1,
 
 Errors (missing file, password-protected or corrupted PDF, wrong password, bad options) exit with a non-zero status and a message on stderr.
 
+When the run finishes, a one-line summary goes to stderr (stdout is unchanged), e.g. `Done: 12 images from 40 pages. No images on pages 2, 5, 9.` It also counts skipped images.
+
 An image that cannot be decoded is skipped with a `Warning:` on stderr and the run carries on with the rest of the document (exit status stays 0).
 
 ### As a library
