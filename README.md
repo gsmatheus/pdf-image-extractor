@@ -13,7 +13,7 @@ The PDF Image Extractor is a Python script designed to process PDF files, specif
 
 ## Requirements
 
-- Python 3.13+
+- Python 3.10+
 - [uv](https://docs.astral.sh/uv/) (recommended) or `pip`
 
 ```bash
