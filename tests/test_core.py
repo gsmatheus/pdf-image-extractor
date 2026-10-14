@@ -38,6 +38,14 @@ def test_remove_letters(text, expected):
     ("1   2\t3", "1 2 3"),
     ("", ""),
     ("???", ""),
+    ("\x00\x1f12", "12"),            # control characters
+    ("\u200b7\u200b", "7"),          # zero-width characters
+    ("..12..", "12"),                # edge dots are invalid on Windows
+    ("- 5 -", "5"),
+    ("_7_", "7"),
+    ("12.50", "12.50"),              # inner punctuation is kept
+    ("$12.50 - 5%", "$12.50 - 5%"),
+    ("...", ""),
 ])
 def test_sanitize_filename(text, expected):
     assert sanitize_filename(text) == expected
@@ -115,6 +123,32 @@ def test_extract_names_files_reference_page_index(make_pdf, tmp_path):
     [page] = extract(str(pdf), str(tmp_path), "png", 90)
     names = sorted(p.rsplit("/", 1)[-1] for p in page.images)
     assert names == ["5001_1_1.png", "5001_1_2.png"]
+
+
+@pytest.mark.parametrize("name, expected", [
+    ("no_digits_in_text", "page_1_1.png"),   # nothing usable in the text
+    ("scanned_page", "page_1_1.png"),        # no text layer at all
+    ("digits_only_reference", "123456_1_1.png"),
+    ("special_chars_in_text", "123456 78_1_1.png"),
+    ("cjk_text", "20001_1_1.png"),
+])
+def test_filename_prefix_comes_from_the_digits_of_the_page_text(name, expected, make_pdf, tmp_path):
+    pdf, _ = make_pdf(name)
+    [page] = extract(str(pdf), str(tmp_path), "png", 90)
+    assert [p.rsplit("/", 1)[-1] for p in page.images] == [expected]
+
+
+def test_same_reference_on_two_pages_stays_distinct(make_pdf, tmp_path):
+    pdf, _ = make_pdf("same_text_on_two_pages")
+    names = [p.rsplit("/", 1)[-1] for page in extract(str(pdf), str(tmp_path), "png", 90)
+             for p in page.images]
+    assert names == ["30000_1_1.png", "30000_2_1.png"]
+
+
+def test_pages_option_keeps_original_page_numbers_in_filenames(make_pdf, tmp_path):
+    pdf, _ = make_pdf("multi_page_mixed")
+    [page] = extract(str(pdf), str(tmp_path), "png", 90, pages="3")
+    assert sorted(p.rsplit("/", 1)[-1] for p in page.images) == ["6003_3_1.png", "6003_3_2.png"]
 
 
 def test_extract_respects_pages_and_min_size(make_pdf, tmp_path):

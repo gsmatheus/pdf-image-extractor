@@ -34,7 +34,7 @@ uv run pdf-image-extractor input_file output_dir img_format img_quality [--min_s
 - `--pages`: (Optional) Comma-separated list or range of page numbers to process (e.g., `1,3,5` or `2-4`).
 - `--password`: (Optional) Password for encrypted PDFs.
 
-If the output directory does not exist, it is created. Images are saved as `<digits of the page text>_<page>_<image>.<format>`.
+If the output directory does not exist, it is created. Images are saved as `<digits of the page text>_<page>_<image>.<format>` (page and image numbers start at 1; `<image>` is the position of the image on the page, so it can skip numbers when small images are filtered out). When the page text has no digits, as in scans, the prefix is `page`, e.g. `page_3_1.png`.
 
 **Example:**
 

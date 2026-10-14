@@ -10,6 +10,8 @@ from PIL import Image
 # Longest filename prefix (in bytes) built from the page text; filesystems cap names at 255 bytes.
 MAX_REFERENCE_BYTES = 100
 DEFAULT_MIN_SIZE = 500
+# Used as the filename prefix when the page text yields nothing usable (scans, text without digits).
+FALLBACK_REFERENCE = "page"
 # Extracted images are scaled so that their larger side is this fraction of the original.
 RESIZE_RATIO = 0.7
 
@@ -42,9 +44,12 @@ def sanitize_filename(text: str, max_bytes: int = MAX_REFERENCE_BYTES) -> str:
         text = text.replace(char, '')
     # Collapse runs of whitespace
     text = ' '.join(text.split())
+    # Drop control and invisible characters (a NUL would make open() fail)
+    text = ''.join(c for c in text if c.isprintable())
     # Keep the result well below the filesystem's filename length limit
     text = text.encode('utf-8')[:max_bytes].decode('utf-8', errors='ignore')
-    return text.strip()
+    # Leading/trailing separators look odd, and trailing dots/spaces are invalid on Windows
+    return text.strip(' ._-')
 
 
 def pillow_format(name: str) -> str:
@@ -97,14 +102,15 @@ def save_images_from_page(document: fitz.Document, page_number: int, reference: 
                           warnings: Optional[list[str]] = None) -> list[str]:
     """Saves every image of a page that is at least ``min_size`` on both sides.
 
-    Files are named ``<reference>_<page>_<image>.<image_format>`` (1-based numbers).
+    Files are named ``<reference>_<page>_<image>.<image_format>`` (1-based numbers);
+    when the sanitized reference is empty, ``FALLBACK_REFERENCE`` is used instead.
     An image that cannot be decoded or written is skipped and described in
     ``warnings`` (when given) so that one bad image does not abort the whole run.
     Returns the list of saved filenames.
     """
     saved_images = []
     page = document.load_page(page_number)
-    safe_reference = sanitize_filename(reference)
+    safe_reference = sanitize_filename(reference) or FALLBACK_REFERENCE
     save_as = pillow_format(image_format)
 
     for img_index, img in enumerate(page.get_images(full=True)):
