@@ -23,7 +23,7 @@ uv sync
 ## Usage
 
 ```bash
-uv run pdf-image-extractor input_file output_dir img_format img_quality [--min_size MIN] [--pages PAGES]
+uv run pdf-image-extractor input_file output_dir img_format img_quality [--min_size MIN] [--pages PAGES] [--password PASSWORD]
 ```
 
 `python main.py ...` and `python -m pdf_image_extractor ...` work too.
@@ -32,6 +32,7 @@ uv run pdf-image-extractor input_file output_dir img_format img_quality [--min_s
 - `img_quality`: integer passed to Pillow (used by JPEG/WebP, ignored by PNG).
 - `--min_size`: (Optional) Minimum width/height for images to extract (default: 500).
 - `--pages`: (Optional) Comma-separated list or range of page numbers to process (e.g., `1,3,5` or `2-4`).
+- `--password`: (Optional) Password for encrypted PDFs.
 
 If the output directory does not exist, it is created. Images are saved as `<digits of the page text>_<page>_<image>.<format>`.
 
@@ -41,7 +42,9 @@ If the output directory does not exist, it is created. Images are saved as `<dig
 uv run pdf-image-extractor ./file.pdf ./images png 100 --min_size 600 --pages 1,3,5
 ```
 
-Errors (missing file, password-protected or corrupted PDF, bad options) exit with a non-zero status and a message on stderr.
+Errors (missing file, password-protected or corrupted PDF, wrong password, bad options) exit with a non-zero status and a message on stderr.
+
+An image that cannot be decoded is skipped with a `Warning:` on stderr and the run carries on with the rest of the document (exit status stays 0).
 
 ### As a library
 
@@ -49,7 +52,7 @@ Errors (missing file, password-protected or corrupted PDF, bad options) exit wit
 from pdf_image_extractor import extract
 
 for page in extract("catalog.pdf", "images", "webp", 85, min_size=500, pages="1-3"):
-    print(page.number, page.text[:40], page.images)
+    print(page.number, page.text[:40], page.images, page.warnings)
 ```
 
 ## Customization

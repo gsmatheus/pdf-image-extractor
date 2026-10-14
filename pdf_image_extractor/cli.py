@@ -41,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pages", type=page_spec, default=None,
                         help="Comma-separated list or range of page numbers to process, "
                              "e.g. 1,3,5 or 2-4 (default: all)")
+    parser.add_argument("--password", default=None,
+                        help="Password for encrypted PDFs")
     return parser
 
 
@@ -64,12 +66,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         for page in extract(args.input_file, args.output_dir, args.img_format,
-                            args.img_quality, args.min_size, args.pages):
+                            args.img_quality, args.min_size, args.pages, args.password):
             print(f"Text on Page {page.number}:")
             print(page.text)
             print("-" * 50)
             for image in page.images:
                 print(f"Image Saved: {image}")
+            for warning in page.warnings:
+                print(f"Warning: {warning}", file=sys.stderr)
             print("=" * 50)
     except ExtractorError as e:
         return error(str(e))
