@@ -13,50 +13,49 @@ The PDF Image Extractor is a Python script designed to process PDF files, specif
 
 ## Requirements
 
-To run this script, you will need:
+- Python 3.13+
+- [uv](https://docs.astral.sh/uv/) (recommended) or `pip`
 
-- Python 3.x
-- pdfplumber
-- fitz (PyMuPDF)
-- PIL (Pillow)
-
-These can be installed using `pip`:
-
-```
-pip install pdfplumber pymupdf pillow
-```
-
-or if using [uv](https://docs.astral.sh/uv/)
-
-```
+```bash
 uv sync
-uv run main.py input_file output_dir img_format img_quality
 ```
 
 ## Usage
 
-1. Clone the repository or download the script.
-2. Run the script:
+```bash
+uv run pdf-image-extractor input_file output_dir img_format img_quality [--min_size MIN] [--pages PAGES]
+```
 
-  ```bash
-  python main.py input_file output_dir img_format img_quality [--min_size MIN] [--pages PAGES]
-  ```
+`python main.py ...` and `python -m pdf_image_extractor ...` work too.
 
-  - `--min_size`: (Optional) Minimum width/height for images to extract (default: 500).
-  - `--pages`: (Optional) Comma-separated list or range of page numbers to process (e.g., `1,3,5` or `2-4`).
+- `img_format`: `png`, `jpeg` (or `jpg`), `webp`, ... Anything Pillow can write.
+- `img_quality`: integer passed to Pillow (used by JPEG/WebP, ignored by PNG).
+- `--min_size`: (Optional) Minimum width/height for images to extract (default: 500).
+- `--pages`: (Optional) Comma-separated list or range of page numbers to process (e.g., `1,3,5` or `2-4`).
 
-  If the output directory does not exist, it will be created automatically.
+If the output directory does not exist, it is created. Images are saved as `<digits of the page text>_<page>_<image>.<format>`.
 
-  **Example:**
-  
-  ```bash
-  python main.py ./file.pdf ./ png 100 --min_size 600 --pages 1,3,5
-  ```
+**Example:**
+
+```bash
+uv run pdf-image-extractor ./file.pdf ./images png 100 --min_size 600 --pages 1,3,5
+```
+
+Errors (missing file, password-protected or corrupted PDF, bad options) exit with a non-zero status and a message on stderr.
+
+### As a library
+
+```python
+from pdf_image_extractor import extract
+
+for page in extract("catalog.pdf", "images", "webp", 85, min_size=500, pages="1-3"):
+    print(page.number, page.text[:40], page.images)
+```
 
 ## Customization
 
-- **Output Image Format**: Chosen on the command line (`png`, `jpeg`/`jpg`, `webp`, ...). Unsupported formats are rejected with a usage error.
-- **Adjusting Resizing Ratio**: The `resize_image` function currently reduces the image size to 70% of the original. Adjust the resizing ratio as per your requirements by modifying the multiplier value.
+- **Resizing ratio**: `RESIZE_RATIO` in `pdf_image_extractor/core.py` (default `0.7`, i.e. the larger side is scaled to 70%).
+- **Filename prefix length**: `MAX_REFERENCE_BYTES` in the same file.
 
 ## Tests
 
